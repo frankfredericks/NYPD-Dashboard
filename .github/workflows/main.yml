@@ -1,0 +1,30 @@
+name: Refresh monthly crime data
+
+on:
+  schedule:
+    - cron: '0 7 1 * *'      # 07:00 UTC on the 1st of each month
+  workflow_dispatch: {}       # adds a manual "Run workflow" button
+
+permissions:
+  contents: write             # allow the job to commit monthly.json back
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install requests
+      - name: Pull latest NYPD data
+        env:
+          SOCRATA_APP_TOKEN: ${{ secrets.SOCRATA_APP_TOKEN }}   # optional
+        run: python refresh_live.py
+      - name: Commit updated monthly.json
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add monthly.json
+          git commit -m "Auto-refresh monthly.json ($(date -u +%Y-%m-%d))" || echo "no changes"
+          git push
