@@ -1,54 +1,116 @@
 #!/usr/bin/env python3
-"""Pull the latest NYPD complaint data from NYC Open Data (Socrata) and write
-monthly.json for the dashboard's trailing-12-month / YoY panel.
+"""Pull the latest NYC Open Data and write the dashboard's live JSON feeds:
+  monthly.json          trailing 24 months of complaints, by precinct (12-mo / YoY view)
+  shootings.json        shooting incidents by precinct x year (NYPD)
+  arrests.json          arrests by precinct x year (NYPD)
+  traffic.json          motor-vehicle crashes/injured/killed by precinct x year (ZIP-approximated)
+  complaints311.json    top 311 complaint types by precinct, last 12 months (ZIP-approximated)
 
-Datasets:
-  Historic (2006 -> end of prior year):  qgea-i56i
-  Current  (year to date):               5uac-w243
-Fields: cmplnt_fr_dt (date), addr_pct_cd (precinct), law_cat_cd (FELONY/MISDEMEANOR/VIOLATION)
+Precinct-tagged datasets (shootings, arrests, complaints) use the precinct field directly.
+Collisions and 311 are NOT precinct-tagged, so they are aggregated by ZIP and allocated to a
+precinct with zip_precinct_crosswalk.json (ZIP -> precinct of its centroid; approximate).
 
-NYC refreshes these roughly quarterly, so run monthly/quarterly; it re-pulls whatever is current.
-Optional: set SOCRATA_APP_TOKEN env var to raise rate limits.
-"""
+Run monthly/quarterly. Optional: set SOCRATA_APP_TOKEN to raise rate limits."""
 import requests, json, datetime, os, collections, sys
 BASE='https://data.cityofnewyork.us/resource/{}.json'
-HIST='qgea-i56i'; YTD='5uac-w243'
+DS=dict(cmpH='qgea-i56i', cmpY='5uac-w243', shoot='833y-fsy8',
+        arrestH='8h9b-rp9u', arrestY='uip8-fykc', collide='h9gi-nx95', c311='erm2-nwe9')
 TOKEN=os.environ.get('SOCRATA_APP_TOKEN')
-CATMAP={'FELONY':'felony','MISDEMEANOR':'misd','VIOLATION':'viol'}
+HEAD={'X-App-Token':TOKEN} if TOKEN else {}
+HERE=os.path.dirname(os.path.abspath(__file__))
+XWALK={str(k):int(v) for k,v in json.load(open(os.path.join(HERE,'zip_precinct_crosswalk.json'))).items()}
 
-def q(dataset, since_iso):
-    headers={'X-App-Token':TOKEN} if TOKEN else {}
-    params={'$select':'date_trunc_ym(cmplnt_fr_dt) as ym, addr_pct_cd, law_cat_cd, count(1) as n',
-            '$where':f"cmplnt_fr_dt >= '{since_iso}' AND addr_pct_cd IS NOT NULL",
-            '$group':'ym, addr_pct_cd, law_cat_cd','$limit':'200000'}
-    r=requests.get(BASE.format(dataset),params=params,headers=headers,timeout=120)
-    r.raise_for_status(); return r.json()
+def soql(ds, **params):
+    try:
+        r=requests.get(BASE.format(DS[ds]), params=params, headers=HEAD, timeout=180)
+        r.raise_for_status(); return r.json()
+    except Exception as e:
+        print(f'warn: {ds} fetch failed: {e}', file=sys.stderr); return None
 
-def main():
-    today=datetime.date.today()
-    start=(today.replace(day=1)-datetime.timedelta(days=365*2+40)).replace(day=1)
-    since=start.strftime('%Y-%m-%dT00:00:00')
+def write(name, obj):
+    with open(os.path.join(HERE, name), 'w') as f: json.dump(obj, f, separators=(',',':'))
+    print('wrote', name)
+
+def today(): return datetime.date.today()
+def iso_months_ago(n):
+    d=today().replace(day=1)
+    return (d - datetime.timedelta(days=31*n)).replace(day=1).isoformat()
+
+# ---------- monthly complaints (trailing 24 mo) by precinct ----------
+def monthly():
+    since=iso_months_ago(25)
     rows=[]
-    for ds in (HIST,YTD):
-        try: rows+=q(ds,since)
-        except Exception as e: print(f'warn: {ds} fetch failed: {e}',file=sys.stderr)
-    # aggregate (ym, pct) -> counts
-    agg=collections.defaultdict(lambda: {'total':0,'felony':0,'misd':0,'viol':0})
+    for k in ('cmpH','cmpY'):
+        r=soql(k, **{'$select':'date_trunc_ym(cmplnt_fr_dt) as ym, addr_pct_cd, law_cat_cd, count(1) as n',
+                     '$where':f"cmplnt_fr_dt >= '{since}T00:00:00' AND addr_pct_cd IS NOT NULL",
+                     '$group':'ym, addr_pct_cd, law_cat_cd', '$limit':'200000'})
+        if r: rows+=r
+    CAT={'FELONY':'felony','MISDEMEANOR':'misd','VIOLATION':'viol'}
+    agg=collections.defaultdict(lambda: collections.defaultdict(lambda:{'total':0,'felony':0,'misd':0,'viol':0}))
     for row in rows:
-        ym=(row.get('ym') or '')[:7]  # 'YYYY-MM'
-        pct=row.get('addr_pct_cd'); cat=CATMAP.get(row.get('law_cat_cd'))
-        if not ym or not pct: continue
-        try: pct=str(int(float(pct)))
+        ym=(row.get('ym') or '')[:7]; p=row.get('addr_pct_cd')
+        if not ym or not p: continue
+        try: p=str(int(float(p)))
         except: continue
-        n=int(float(row.get('n',0)))
-        agg[(ym,pct)]['total']+=n
-        if cat: agg[(ym,pct)][cat]+=n
-    byP=collections.defaultdict(list)
-    for (ym,pct),c in agg.items():
-        byP[pct].append({'ym':ym,**c})
-    for pct in byP: byP[pct].sort(key=lambda x:x['ym'])
-    out={'generated':today.isoformat(),'source':'NYPD Complaint Data (qgea-i56i + 5uac-w243)','byPrecinct':byP}
-    with open('monthly.json','w') as f: json.dump(out,f,separators=(',',':'))
-    print(f'wrote monthly.json — {len(byP)} precincts, {sum(len(v) for v in byP.values())} precinct-months through {max((r["ym"] for v in byP.values() for r in v), default="?")}')
+        n=int(float(row.get('n',0))); o=agg[p][ym]; o['total']+=n
+        c=CAT.get(row.get('law_cat_cd'));
+        if c: o[c]+=n
+    byP={p:[dict(ym=ym, **v) for ym,v in sorted(d.items())] for p,d in agg.items()}
+    write('monthly.json', {'generated':today().isoformat(),'source':'NYPD Complaint Data','byPrecinct':byP})
 
-if __name__=='__main__': main()
+# ---------- shootings / arrests by precinct x year ----------
+def by_precinct_year(name, datasets, datefield, pctfield, src):
+    rows=[]
+    for k in datasets:
+        r=soql(k, **{'$select':f'date_extract_y({datefield}) as yr, {pctfield} as precinct, count(1) as n',
+                     '$group':f'yr, {pctfield}', '$limit':'20000'})
+        if r: rows+=r
+    byP=collections.defaultdict(lambda: collections.defaultdict(int)); city=collections.defaultdict(int); yrs=set()
+    for row in rows:
+        try: yr=int(float(row['yr'])); p=int(float(row['precinct'])); n=int(float(row['n']))
+        except: continue
+        if yr<2000 or yr>today().year: continue
+        yrs.add(yr); byP[str(p)][str(yr)]+=n; city[str(yr)]+=n
+    write(name, {'generated':today().isoformat(),'source':src,'years':sorted(yrs),
+                 'byPrecinct':{p:dict(d) for p,d in byP.items()},'city':dict(city)})
+
+# ---------- collisions -> precinct via ZIP ----------
+def traffic():
+    r=soql('collide', **{'$select':'date_extract_y(crash_date) as yr, zip_code, count(1) as crashes, '
+                         'sum(number_of_persons_injured) as inj, sum(number_of_persons_killed) as kill',
+                         '$where':'zip_code IS NOT NULL','$group':'yr, zip_code','$limit':'80000'})
+    if not r: return
+    byP=collections.defaultdict(lambda: collections.defaultdict(lambda:{'crashes':0,'inj':0,'kill':0}))
+    for row in r:
+        z=str(row.get('zip_code','')).split('.')[0].zfill(5); p=XWALK.get(z)
+        if not p: continue
+        try: yr=int(float(row['yr']))
+        except: continue
+        if yr<2012 or yr>today().year: continue
+        o=byP[str(p)][yr]; o['crashes']+=int(float(row.get('crashes',0) or 0))
+        o['inj']+=int(float(row.get('inj',0) or 0)); o['kill']+=int(float(row.get('kill',0) or 0))
+    out={p:[dict(yr=yr, **v) for yr,v in sorted(d.items())] for p,d in byP.items()}
+    write('traffic.json', {'generated':today().isoformat(),'source':'NYC Motor Vehicle Collisions (ZIP-approximated to precinct)','byPrecinct':out})
+
+# ---------- 311 -> precinct via ZIP, top types ----------
+def requests311():
+    since=iso_months_ago(12)
+    r=soql('c311', **{'$select':'incident_zip, complaint_type, count(1) as n',
+                      '$where':f"created_date > '{since}T00:00:00' AND incident_zip IS NOT NULL",
+                      '$group':'incident_zip, complaint_type','$limit':'400000'})
+    if not r: return
+    byP=collections.defaultdict(lambda: collections.defaultdict(int))
+    for row in r:
+        z=str(row.get('incident_zip','')).split('.')[0].zfill(5); p=XWALK.get(z)
+        if not p: continue
+        byP[str(p)][row.get('complaint_type','Unknown')]+=int(float(row.get('n',0) or 0))
+    out={p:[{'type':t,'n':n} for t,n in sorted(d.items(), key=lambda x:-x[1])[:12]] for p,d in byP.items()}
+    write('complaints311.json', {'generated':today().isoformat(),'source':'NYC 311 Service Requests (ZIP-approximated to precinct)','byPrecinct':out})
+
+if __name__=='__main__':
+    monthly()
+    by_precinct_year('shootings.json', ['shoot'], 'occur_date', 'precinct', 'NYPD Shooting Incident Data')
+    by_precinct_year('arrests.json', ['arrestH','arrestY'], 'arrest_date', 'arrest_precinct', 'NYPD Arrests Data')
+    traffic()
+    requests311()
+    print('done.')
