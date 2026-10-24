@@ -14,7 +14,7 @@ Run monthly/quarterly. Optional: set SOCRATA_APP_TOKEN to raise rate limits."""
 import requests, json, datetime, os, collections, sys
 BASE='https://data.cityofnewyork.us/resource/{}.json'
 DS=dict(cmpH='qgea-i56i', cmpY='5uac-w243', shoot='833y-fsy8',
-        arrestH='8h9b-rp9u', arrestY='uip8-fykc', collide='h9gi-nx95', c311='erm2-nwe9')
+        arrestH='8h9b-rp9u', arrestY='uip8-fykc', collide='h9gi-nx95', c311='erm2-nwe9', shootY='5ucz-vwe8')
 TOKEN=os.environ.get('SOCRATA_APP_TOKEN')
 HEAD={'X-App-Token':TOKEN} if TOKEN else {}
 HERE=os.path.dirname(os.path.abspath(__file__))
@@ -138,10 +138,14 @@ def requests311():
           'byPrecinct':{p:{'total':pt(v['total']),'types':pty(v['types'])} for p,v in byP.items()},
           'city':{'total':pt(city['total']),'types':pty(city['types'])}})
 
+def safe(fn,*a):
+    try: fn(*a)
+    except Exception as e: print(f'warn: {getattr(fn,"__name__",fn)} failed: {e}', file=sys.stderr)
+
 if __name__=='__main__':
-    monthly()
-    by_precinct_year('shootings.json', ['shoot'], 'occur_date', 'precinct', 'NYPD Shooting Incident Data')
-    by_precinct_year('arrests.json', ['arrestH','arrestY'], 'arrest_date', 'arrest_precinct', 'NYPD Arrests Data')
-    traffic()
-    requests311()
+    safe(monthly)
+    safe(by_precinct_year,'shootings.json', ['shoot','shootY'], 'occur_date', 'precinct', 'NYPD Shooting Incident Data')
+    safe(by_precinct_year,'arrests.json', ['arrestH','arrestY'], 'arrest_date', 'arrest_precinct', 'NYPD Arrests Data')
+    safe(traffic)
+    safe(requests311)
     print('done.')
