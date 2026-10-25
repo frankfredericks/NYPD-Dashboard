@@ -95,6 +95,20 @@ details.acc[open]>summary .chev{transform:rotate(90deg)}
 .tabpane[hidden]{display:none}
 .loadnote{font-size:12px;color:var(--mute);font-weight:bold}
 .srconly{font-size:11px;color:var(--mute);margin-top:4px}
+
+/* readability + mobile */
+body{font-size:15px}
+.cap{font-size:12.5px}.statline{font-size:14px}.foot{font-size:11.5px}.loadnote{font-size:12.5px}
+.kpi .big{font-size:33px}.kpi .lab{font-size:12.5px}.kpi .sub{font-size:11.5px}
+.card h2{font-size:16px}.tabbtn{font-size:15px}
+select,button.btn,.themebtn,.ctl label,.tag{font-size:13px}
+@media (max-width:760px){
+ .wrap{padding:12px}header{padding:10px 12px}header h1{font-size:16px}
+ .kpis{grid-template-columns:repeat(2,1fr);gap:8px}.kpi{padding:11px 12px}.kpi .big{font-size:26px}
+ .chartbox{height:300px}.chartbox.sm{height:270px}.row.two{grid-template-columns:1fr}
+ .tabbtn{padding:9px 10px;font-size:14px}table{font-size:13px}th,td{padding:6px 7px}
+ select{min-width:120px}#tip{max-width:82vw}
+}
 </style>
 </head>
 <body>
@@ -128,6 +142,7 @@ details.acc[open]>summary .chev{transform:rotate(90deg)}
    <button class="tabbtn active" data-tab="crime" role="tab">Crime &amp; safety</button>
    <button class="tabbtn" data-tab="traffic" role="tab">Traffic</button>
    <button class="tabbtn" data-tab="t311" role="tab">311 Quality-of-Life</button>
+   <button class="tabbtn" data-tab="t911" role="tab">911 calls</button>
   </div>
   <div id="tab-crime" class="tabpane" role="tabpanel">
 
@@ -151,18 +166,9 @@ details.acc[open]>summary .chev{transform:rotate(90deg)}
  </div>
 
  <div class="card">
-  <h2>Trailing 12 months — all crime, with year-over-year</h2>
-  <div class="cap" id="mvCap">Live monthly view from NYPD Complaint Data (auto-updates when the city posts a refresh)</div>
-  <div class="toolbar">
-   <select id="mvmetric">
-    <option value="total">All complaints</option>
-    <option value="felony">Felony</option>
-    <option value="misd">Misdemeanor</option>
-    <option value="viol">Violation</option>
-   </select>
-   <label class="tag" for="mfile">· or load a monthly.json manually</label>
-   <input type="file" id="mfile" accept="application/json,.json">
-  </div>
+  <h2>Most recent 12 months</h2>
+  <div class="cap" id="mvCap">Per 100,000 residents, last 12 months with data — precinct vs citywide, middle-50% band</div>
+  <div class="toolbar"><label class="tag" for="mvmetric">Category</label><select id="mvmetric"></select><span class="tag">Same categories &amp; components as the multi-year chart</span></div>
   <div id="mvEmpty" class="empty">The monthly feed will appear here once the scheduled refresh has run. You can also load a <b>monthly.json</b> above.</div>
   <div id="mvWrap" style="display:none">
    <div class="chartbox"><canvas id="mv"></canvas></div>
@@ -201,6 +207,10 @@ details.acc[open]>summary .chev{transform:rotate(90deg)}
     <div id="arrestStats" style="margin-top:10px"><span class="loadnote">Loads live from NYC Open Data on the hosted site.</span></div>
    </div>
   </div>
+  <div class="row two">
+   <div class="card"><h2>Shootings — last 12 months</h2><div class="cap">Per 100,000 residents · precinct vs citywide · middle-50% band</div><div class="chartbox sm"><canvas id="shootMo"></canvas></div><div id="shootMoStats" style="margin-top:10px"></div></div>
+   <div class="card"><h2>Arrests — last 12 months</h2><div class="cap">Per 100,000 residents · precinct vs citywide · middle-50% band</div><div class="chartbox sm"><canvas id="arrestMo"></canvas></div><div id="arrestMoStats" style="margin-top:10px"></div></div>
+  </div>
   </div><!-- /tab-crime -->
 
   <div id="tab-traffic" class="tabpane" role="tabpanel" hidden>
@@ -210,6 +220,10 @@ details.acc[open]>summary .chev{transform:rotate(90deg)}
     <div class="chartbox"><canvas id="traffic"></canvas></div>
     <div id="trafficStats" style="margin-top:10px"><span class="loadnote">Loads live from NYC Open Data on the hosted site.</span></div>
     <div class="foot">Source: NYC Vision Zero / Motor Vehicle Collisions. Not precinct-tagged, so crashes are area-weighted from ZIP codes to precincts.</div>
+   </div>
+   <div class="row two">
+    <div class="card"><h2>Crashes — last 12 months</h2><div class="cap">Per 100,000 residents · precinct vs citywide · middle-50% band</div><div class="chartbox sm"><canvas id="trafficMo"></canvas></div><div id="trafficMoStats" style="margin-top:10px"></div></div>
+    <div class="card"><h2>Crash contributing factors</h2><div class="cap" id="trafficPieCap">Top factors in the last 12 months</div><div class="chartbox sm"><canvas id="trafficPie"></canvas></div><div id="trafficPieStats" style="margin-top:10px"></div></div>
    </div>
   </div>
 
@@ -222,11 +236,24 @@ details.acc[open]>summary .chev{transform:rotate(90deg)}
     <div id="c311Stats" style="margin-top:10px"><span class="loadnote">Loads on the hosted site after the refresh runs.</span></div>
    </div>
    <div class="card">
+    <h2>311 complaints — last 12 months</h2><div class="cap">Requests per 1,000 residents · precinct vs citywide · middle-50% band</div>
+    <div class="chartbox sm"><canvas id="c311Mo"></canvas></div><div id="c311MoStats" style="margin-top:10px"></div>
+   </div>
+   <div class="card">
     <h2>311 complaint mix</h2>
     <div class="cap" id="c311PieCap">Share of top complaint types — precinct level</div>
     <div class="chartbox sm"><canvas id="c311pie"></canvas></div>
     <div class="foot">Source: NYC 311 Service Requests. Not precinct-tagged, so requests are area-weighted from ZIP codes to precincts.</div>
    </div>
+  </div>
+
+  <div id="tab-911" class="tabpane" role="tabpanel" hidden>
+   <div class="card"><h2>911 calls for service over time</h2><div class="cap" id="n911Cap">Dispatched 911 calls per 1,000 residents — precinct vs citywide, middle-50% band (2018–present)</div><div class="chartbox"><canvas id="n911trend"></canvas></div><div id="n911Stats" style="margin-top:10px"><span class="loadnote">Loads live from NYC Open Data on the hosted site.</span></div></div>
+   <div class="row two">
+    <div class="card"><h2>911 calls — last 12 months</h2><div class="cap">Per 1,000 residents · precinct vs citywide · middle-50% band</div><div class="chartbox sm"><canvas id="n911Mo"></canvas></div><div id="n911MoStats" style="margin-top:10px"></div></div>
+    <div class="card"><h2>911 call-type mix</h2><div class="cap" id="n911PieCap">Top call types in the last 12 months</div><div class="chartbox sm"><canvas id="n911pie"></canvas></div><div id="n911pieStats" style="margin-top:10px"></div></div>
+   </div>
+   <div class="foot">Source: NYPD Calls for Service (CAD), 2018–present. Call volume reflects demand/dispatch, not crime.</div>
   </div>
 
  <div class="card"><div class="foot" id="foot"></div></div>
@@ -240,6 +267,7 @@ const DEF={'All Reported Crime':'Every offense across the four NYPD CompStat cla
 function esc(x){return String(x).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;');}
 function helpSpan(id){const a=esc(id);return `<span class="help" tabindex="0" role="button" aria-label="Definition of ${a}" data-m="${a}">?</span>`;}
 const YEARS=D.years, N=YEARS.length, RES=D.precincts;
+if(window.Chart){Chart.defaults.font.size=13;Chart.defaults.font.weight='bold';}
 const yi=y=>YEARS.indexOf(y);
 let START=2000;
 const si=()=>Math.max(0,yi(START));
@@ -284,8 +312,12 @@ document.getElementById('themebtn').addEventListener('click',()=>{
 document.querySelectorAll('.tabbtn').forEach(b=>b.addEventListener('click',()=>{
  document.querySelectorAll('.tabbtn').forEach(x=>x.classList.remove('active'));b.classList.add('active');
  const t=b.getAttribute('data-tab');activeTab=t;
- document.getElementById('tab-crime').hidden=(t!=='crime');document.getElementById('tab-traffic').hidden=(t!=='traffic');document.getElementById('tab-311').hidden=(t!=='t311');
- if(t==='traffic')renderTraffic();else if(t==='t311')render311();else{renderShootings();renderArrests();}
+ ['crime','traffic','311','911'].forEach(k=>{const el=document.getElementById('tab-'+(k==='311'?'311':k==='911'?'911':k));});
+ document.getElementById('tab-crime').hidden=(t!=='crime');document.getElementById('tab-traffic').hidden=(t!=='traffic');document.getElementById('tab-311').hidden=(t!=='t311');document.getElementById('tab-911').hidden=(t!=='t911');
+ if(t==='traffic'){renderTraffic();renderTrafficMonthly();renderTrafficPie();}
+ else if(t==='t311'){render311();render311Monthly();}
+ else if(t==='t911'){render911();render911Monthly();render911Pie();}
+ else{renderShootings();renderArrests();renderShootMonthly();renderArrestMonthly();}
 }));
 
 // ---- KPIs ----
@@ -363,33 +395,33 @@ function renderCCRB(){const cc=D.ccrb[String(P)],s0=si();const rate=cc.total.map
  document.getElementById('ccrbStats').innerHTML=`<div class="statline">Complaints <b>${f1(r)}</b>/100k vs <b>${f1(city)}</b> city &nbsp;·&nbsp; <span class="pill">#${higher+1} of 76</span> &nbsp; <span class="${vs<0?'dn':'up'}">${sgn(vs)}</span></div><div class="statline">Since 2000: <b>${fmt(tot)}</b> complaints, <b>${fmt(sub)}</b> substantiated (${f1(tot?sub/tot*100:0)}%)</div>`;}
 
 // ---- Monthly ----
-document.getElementById('mfile').addEventListener('change',ev=>{const f=ev.target.files[0];if(!f)return;const rd=new FileReader();rd.onload=()=>{try{MONTHLY=JSON.parse(rd.result);renderMonthly();}catch(e){alert('Could not parse monthly.json: '+e.message);}};rd.readAsText(f);});
 document.getElementById('mvmetric').addEventListener('change',renderMonthly);
-function renderMonthly(){const wrap=document.getElementById('mvWrap'),empty=document.getElementById('mvEmpty');
- const key=document.getElementById('mvmetric').value;
- const rows=(MONTHLY&&MONTHLY.byPrecinct&&MONTHLY.byPrecinct[String(P)])||null;
- if(!rows||!rows.length){wrap.style.display='none';empty.style.display='';
-   if(!liveTried[P]){liveTried[P]=1;empty.innerHTML='<span class="loadnote">Loading the last 24 months live from NYC Open Data…</span>';loadMonthlyLive();}
-   else{empty.innerHTML='The monthly view loads on the hosted site. (The Claude preview can’t fetch external data.)';}
-   return;}
+function renderMonthly(){renderCrimeMonthly();}
+const SUMM_IDS=['All Reported Crime','Violent (index crimes)','Property (index crimes)','Seven Major Felony','Non-Seven Major Felony','Misdemeanor','Violation','Murder & Non Negl. Manslaughter','Rape','Robbery','Felony Assault','Burglary','Grand Larceny','Grand Larceny Of Motor Vehicle'];
+const KYMAP={'Murder & Non Negl. Manslaughter':'k101','Rape':'k104','Robbery':'k105','Felony Assault':'k106','Burglary':'k107','Grand Larceny':'k109','Grand Larceny Of Motor Vehicle':'k110'};
+function fillMv(){const sel=document.getElementById('mvmetric');if(sel.dataset.filled)return;sel.dataset.filled='1';SUMM_IDS.forEach(id=>{const o=document.createElement('option');o.value=id;o.textContent=id;sel.appendChild(o);});}
+function crimeCat(o,id){if(!o)return 0;const sev=o.k101+o.k104+o.k105+o.k106+o.k107+o.k109+o.k110;
+ if(id==='All Reported Crime')return o.total;if(id==='Seven Major Felony')return sev;if(id==='Non-Seven Major Felony')return Math.max(0,o.felony-sev);
+ if(id==='Misdemeanor')return o.misd;if(id==='Violation')return o.viol;if(id==='Violent (index crimes)')return o.k101+o.k104+o.k105+o.k106;if(id==='Property (index crimes)')return o.k107+o.k109+o.k110;
+ return o[KYMAP[id]]||0;}
+async function loadCrimeMonthly(){if(cache.crimeMo)return cache.crimeMo;const since=moSince();
+ const qc=d=>soql(d,'$select=date_trunc_ym(cmplnt_fr_dt) as ym, addr_pct_cd as pct, law_cat_cd, count(1) as n&$where='+encodeURIComponent("cmplnt_fr_dt>'"+since+"' AND addr_pct_cd IS NOT NULL")+'&$group=ym,addr_pct_cd,law_cat_cd&$limit=40000');
+ const qk=d=>soql(d,'$select=date_trunc_ym(cmplnt_fr_dt) as ym, addr_pct_cd as pct, ky_cd, count(1) as n&$where='+encodeURIComponent("cmplnt_fr_dt>'"+since+"' AND addr_pct_cd IS NOT NULL AND ky_cd in (101,104,105,106,107,109,110)")+'&$group=ym,addr_pct_cd,ky_cd&$limit=40000');
+ const [c1,c2,k1,k2]=await Promise.all([qc(DS.cmpH),qc(DS.cmpY),qk(DS.cmpH),qk(DS.cmpY)]);
+ if(!c1&&!c2)return null; const M={},ms=new Set();
+ const add=(p,ym,f,n)=>{const pk=String(p);M[pk]=M[pk]||{};const o=M[pk][ym]=M[pk][ym]||{total:0,felony:0,misd:0,viol:0,k101:0,k104:0,k105:0,k106:0,k107:0,k109:0,k110:0};o[f]+=n;};
+ (c1||[]).concat(c2||[]).forEach(r=>{const ym=(r.ym||'').slice(0,7),p=parseInt(r.pct);if(!ym||!p)return;ms.add(ym);const n=+r.n||0;add(p,ym,'total',n);const c=r.law_cat_cd;if(c==='FELONY')add(p,ym,'felony',n);else if(c==='MISDEMEANOR')add(p,ym,'misd',n);else if(c==='VIOLATION')add(p,ym,'viol',n);});
+ (k1||[]).concat(k2||[]).forEach(r=>{const ym=(r.ym||'').slice(0,7),p=parseInt(r.pct),key='k'+parseInt(r.ky_cd);if(!ym||!p||!(key in {k101:1,k104:1,k105:1,k106:1,k107:1,k109:1,k110:1}))return;add(p,ym,key,+r.n||0);});
+ cache.crimeMo={months:[...ms].sort(),M};return cache.crimeMo;}
+async function renderCrimeMonthly(){fillMv();const wrap=document.getElementById('mvWrap'),empty=document.getElementById('mvEmpty');
+ empty.style.display='';wrap.style.display='none';empty.innerHTML='<span class="loadnote">Loading the last 12 months live from NYC Open Data…</span>';
+ const cm=await loadCrimeMonthly();
+ if(!cm||!cm.months.length){empty.innerHTML='The 12-month view loads on the hosted site (the preview can’t fetch live data).';return;}
  empty.style.display='none';wrap.style.display='';
- const r=rows.slice(-24),last12=r.slice(-12),labels=last12.map(x=>x.ym);
- const cur=last12.map(x=>x[key]??x.total);
- const prior=last12.map(x=>{const pm=(parseInt(x.ym.slice(0,4))-1)+x.ym.slice(4);const f=r.find(z=>z.ym===pm);return f?(f[key]??f.total):null;});
- const yoy=cur.map((v,k)=>prior[k]?((v-prior[k])/prior[k]*100):null);
- const ink=css('--ink'),mute=css('--mute'),line=css('--line'),focus=css('--focus'),steel=css('--steel'),gold=css('--gold');
- if(charts.mv)charts.mv.destroy();
- charts.mv=new Chart(document.getElementById('mv'),{data:{labels,datasets:[
-   {type:'line',label:'Prior 12 months',data:prior,borderColor:steel,borderWidth:2.4,borderDash:[6,3],pointRadius:0,tension:.15,order:3,yAxisID:'y'},
-   {type:'line',label:'Trailing 12 months',data:cur,borderColor:focus,borderWidth:3.4,pointRadius:0,tension:.15,order:2,yAxisID:'y'},
-   {type:'line',label:'YoY %',data:yoy,borderColor:gold,borderWidth:2,pointRadius:2,fill:false,order:1,yAxisID:'y1'}
-  ]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:ink,font:{weight:'bold',size:11}}},tooltip:{mode:'index',intersect:false}},
-   scales:{x:{ticks:{color:mute,font:{weight:'bold'},maxTicksLimit:12},grid:{display:false}},
-    y:{beginAtZero:true,position:'left',ticks:{color:mute,font:{weight:'bold'}},grid:{color:line},title:{display:true,text:'complaints',color:mute}},
-    y1:{position:'right',ticks:{color:gold,font:{weight:'bold'},callback:v=>v+'%'},grid:{display:false},title:{display:true,text:'YoY %',color:gold}}}}});
- const sumc=cur.reduce((a,b)=>a+(b||0),0),sump=prior.reduce((a,b)=>a+(b||0),0);
- document.getElementById('mvStats').innerHTML=`<div class="statline">Trailing 12 months: <b>${fmt(sumc)}</b> vs <b>${fmt(sump)}</b> prior 12 &nbsp;·&nbsp; <span class="${sumc<sump?'dn':'up'}">${sgn(pc(sump,sumc))}</span> YoY${MONTHLY.generated?' &nbsp;·&nbsp; feed: '+MONTHLY.generated:''}</div>`;}
-
+ const id=document.getElementById('mvmetric').value||'All Reported Crime';
+ const data={months:cm.months,byP:{}};RES.forEach(q=>{const mm=cm.M[String(q)]||{};const o={};cm.months.forEach(ym=>o[ym]=crimeCat(mm[ym],id));data.byP[String(q)]=o;});
+ document.getElementById('mvCap').textContent=id+' — per 100,000 residents, most recent 12 months (precinct vs citywide, middle-50% band)';
+ monthlyBand('mv','mvStats',data,1e5,'/100k');}
 // ---- CSV ----
 document.getElementById('csvbtn').addEventListener('click',()=>{let csv='metric,'+YEARS.slice(si()).join(',')+'\n';
  D.metrics.forEach(mm=>{csv+='"'+mm.id+'",'+rateSeries(mm.id,P).slice(si()).map(v=>v.toFixed(1)).join(',')+'\n';});
@@ -559,7 +591,7 @@ document.getElementById('xlsxbtn').addEventListener('click',async()=>{
 // ===== live NYC Open Data (populates on the hosted site; the Claude preview can't fetch external URLs) =====
 let activeTab='crime', liveTried={}, TRAFFIC=null, C311=null;
 const SOC='https://data.cityofnewyork.us/resource/';
-const DS={shoot:'833y-fsy8',shootY:'5ucz-vwe8',arrestH:'8h9b-rp9u',arrestY:'uip8-fykc',collide:'h9gi-nx95',c311:'erm2-nwe9',cmpH:'qgea-i56i',cmpY:'5uac-w243'};
+const DS={shoot:'833y-fsy8',shootY:'5ucz-vwe8',arrestH:'8h9b-rp9u',arrestY:'uip8-fykc',collide:'h9gi-nx95',c311:'erm2-nwe9',cmpH:'qgea-i56i',cmpY:'5uac-w243',cadH:'d6zx-ckhd',cadY:'n2zq-pubd'};
 const XWALK={"10464":[[45,0.9763],[47,0.0237]],"10470":[[47,1.0]],"10455":[[40,0.7728],[41,0.2272]],"10473":[[43,1.0]],"11234":[[63,0.9766],[61,0.0234]],"11210":[[70,0.5137],[63,0.2838],[67,0.2025]],"11215":[[72,0.5357],[78,0.4643]],"11224":[[60,1.0]],"11239":[[75,1.0]],"10030":[[32,0.9405],[30,0.0595]],"10037":[[32,0.5349],[25,0.4651]],"10009":[[9,0.7444],[13,0.2556]],"10028":[[19,1.0]],"10065":[[19,1.0]],"10011":[[10,0.5657],[13,0.2298],[6,0.2045]],"10112":[[18,1.0]],"10031":[[30,0.9225],[26,0.0775]],"10169":[[18,1.0]],"10271":[[1,1.0]],"11355":[[109,1.0]],"11423":[[103,0.6489],[107,0.3511]],"11415":[[102,1.0]],"11358":[[109,0.6585],[111,0.3415]],"11697":[[100,1.0]],"11694":[[100,1.0]],"11004":[[105,1.0]],"11424":[[102,0.9597],[107,0.0403]],"10457":[[48,0.4869],[46,0.2449],[42,0.1427],[44,0.1254]],"10463":[[50,0.9546],[52,0.0454]],"10454":[[40,1.0]],"11238":[[77,0.3678],[88,0.3348],[78,0.2102],[79,0.0872]],"11206":[[90,0.5507],[79,0.2595],[83,0.1323],[81,0.0575]],"11213":[[77,0.6145],[71,0.3292],[81,0.0564]],"11226":[[70,0.5664],[67,0.3944],[71,0.0392]],"11230":[[70,0.5899],[66,0.4101]],"11040":[[105,1.0]],"10075":[[19,1.0]],"10025":[[24,0.7847],[26,0.2153]],"10039":[[32,0.6709],[33,0.3291]],"10005":[[1,1.0]],"10173":[[14,1.0]],"10044":[[114,1.0]],"11357":[[109,1.0]],"11420":[[106,1.0]],"11691":[[101,1.0]],"11417":[[106,1.0]],"11101":[[108,0.7062],[114,0.2938]],"11418":[[102,1.0]],"11366":[[107,1.0]],"11105":[[114,1.0]],"11426":[[105,1.0]],"11411":[[105,1.0]],"11430":[[113,0.9779],[106,0.0221]],"10306":[[122,0.8783],[121,0.1217]],"10302":[[121,0.9697],[120,0.0303]],"10312":[[123,0.9206],[122,0.0794]],"11235":[[61,0.731],[60,0.269]],"11205":[[88,0.6689],[79,0.3311]],"10017":[[17,0.7269],[14,0.1555],[18,0.1176]],"10027":[[26,0.5825],[28,0.2615],[32,0.156]],"10032":[[33,0.9144],[30,0.0856]],"10002":[[7,0.7531],[5,0.2469]],"10026":[[28,1.0]],"10128":[[19,0.9556],[23,0.0444]],"10153":[[18,1.0]],"10154":[[18,1.0]],"10165":[[14,1.0]],"11422":[[105,0.9724],[113,0.0276]],"11373":[[110,0.9495],[104,0.028],[112,0.0225]],"11372":[[115,1.0]],"11421":[[102,1.0]],"11360":[[109,0.6337],[111,0.3663]],"11436":[[113,1.0]],"11432":[[107,0.7817],[103,0.2183]],"11428":[[105,1.0]],"10301":[[120,0.9053],[122,0.0947]],"10305":[[122,0.7402],[120,0.2598]],"10310":[[120,1.0]],"10468":[[52,0.8063],[50,0.1067],[46,0.087]],"10462":[[49,0.5324],[43,0.4004],[45,0.0672]],"10465":[[45,1.0]],"11370":[[114,0.6037],[115,0.3963]],"11211":[[90,0.5381],[94,0.3563],[88,0.1057]],"11209":[[68,1.0]],"11220":[[72,0.628],[68,0.29],[66,0.082]],"11425":[[68,1.0]],"10040":[[34,1.0]],"10018":[[14,0.6053],[10,0.3947]],"10022":[[17,0.5929],[18,0.3078],[19,0.0993]],"10023":[[20,1.0]],"10036":[[18,0.5291],[14,0.3226],[10,0.1483]],"10115":[[26,1.0]],"10177":[[18,1.0]],"10174":[[17,1.0]],"10279":[[1,1.0]],"11434":[[113,0.8333],[105,0.1667]],"11378":[[104,0.6899],[108,0.3101]],"11005":[[105,1.0]],"11109":[[108,1.0]],"10303":[[121,1.0]],"10461":[[45,0.5042],[49,0.4958]],"10451":[[40,0.4581],[44,0.4549],[42,0.087]],"10471":[[50,1.0]],"11223":[[61,0.4988],[62,0.2795],[60,0.2217]],"11221":[[83,0.4708],[81,0.3869],[79,0.1423]],"11203":[[67,0.827],[71,0.173]],"11232":[[72,0.9588],[66,0.0412]],"11229":[[61,0.9216],[63,0.0784]],"11222":[[94,1.0]],"11212":[[73,0.7335],[67,0.2665]],"11207":[[75,0.7882],[83,0.2118]],"11237":[[83,0.6488],[90,0.3512]],"11228":[[68,0.7047],[62,0.2953]],"10013":[[1,0.6872],[5,0.3128]],"10029":[[23,0.924],[25,0.076]],"10021":[[19,1.0]],"10014":[[6,0.8255],[1,0.1508],[10,0.0237]],"10006":[[1,1.0]],"10020":[[18,1.0]],"10278":[[5,1.0]],"10280":[[1,1.0]],"10172":[[18,1.0]],"10103":[[18,1.0]],"10110":[[14,1.0]],"11429":[[105,1.0]],"11362":[[111,1.0]],"11368":[[110,0.8037],[115,0.1963]],"11412":[[113,0.852],[103,0.148]],"11414":[[106,1.0]],"11413":[[105,0.8322],[113,0.1678]],"11416":[[102,1.0]],"10314":[[121,0.8199],[123,0.0721],[122,0.056],[120,0.052]],"10467":[[47,0.3127],[50,0.296],[52,0.2306],[49,0.1607]],"10458":[[48,0.4883],[52,0.4045],[46,0.1072]],"10472":[[43,1.0]],"11204":[[62,0.5721],[66,0.4279]],"11216":[[79,0.6581],[77,0.3419]],"11219":[[66,0.7288],[68,0.1918],[62,0.0794]],"11208":[[75,1.0]],"11233":[[73,0.4773],[81,0.4149],[77,0.1077]],"11217":[[78,0.5275],[84,0.2321],[88,0.1679],[76,0.0725]],"11225":[[71,0.9625],[78,0.0375]],"10035":[[25,1.0]],"10016":[[17,0.5725],[13,0.2379],[14,0.1896]],"10012":[[6,0.3064],[1,0.3036],[5,0.2679],[9,0.1221]],"10024":[[20,0.4687],[24,0.377],[26,0.1544]],"10119":[[14,1.0]],"10167":[[18,1.0]],"10170":[[14,1.0]],"11354":[[109,1.0]],"11419":[[102,0.5096],[106,0.4904]],"11374":[[112,0.966],[104,0.034]],"11427":[[105,0.6928],[111,0.2336],[107,0.0737]],"11377":[[108,0.7729],[114,0.1967],[115,0.0304]],"11106":[[114,1.0]],"11361":[[111,1.0]],"11365":[[107,0.5066],[109,0.259],[111,0.2345]],"11364":[[111,0.8302],[107,0.1698]],"11451":[[103,1.0]],"10311":[[121,1.0]],"10460":[[48,0.3757],[42,0.2001],[52,0.1888],[43,0.1398],[49,0.0957]],"10456":[[42,0.5695],[44,0.3452],[40,0.0853]],"10452":[[44,0.9706],[46,0.0294]],"10469":[[49,0.5376],[47,0.4624]],"10475":[[45,0.8129],[47,0.1871]],"11231":[[76,1.0]],"11236":[[69,0.9004],[67,0.0996]],"10199":[[14,0.6421],[10,0.3579]],"10004":[[1,0.8935],[84,0.0676],[76,0.039]],"10019":[[18,1.0]],"10007":[[1,0.7714],[5,0.2286]],"10152":[[18,1.0]],"10282":[[1,1.0]],"10162":[[19,1.0]],"10171":[[18,1.0]],"11385":[[104,1.0]],"11433":[[103,0.7214],[113,0.2786]],"11356":[[109,1.0]],"11375":[[112,1.0]],"11104":[[108,1.0]],"11351":[[109,1.0]],"10304":[[122,0.5792],[120,0.4208]],"10309":[[123,1.0]],"10307":[[123,1.0]],"10466":[[47,1.0]],"10459":[[41,0.5688],[42,0.3624],[43,0.0688]],"10453":[[46,0.9695],[52,0.0305]],"10474":[[41,1.0]],"11214":[[62,0.7722],[60,0.2278]],"11201":[[84,0.7425],[76,0.1567],[88,0.1008]],"11218":[[66,0.606],[72,0.1995],[70,0.1945]],"11001":[[105,1.0]],"10034":[[34,1.0]],"10038":[[1,0.5555],[5,0.4445]],"10033":[[34,0.6959],[33,0.3041]],"10001":[[10,0.6049],[14,0.3003],[13,0.0948]],"10003":[[9,0.4599],[13,0.3423],[6,0.1979]],"10111":[[18,1.0]],"10069":[[20,0.9681],[18,0.0319]],"10010":[[13,0.9778],[17,0.0222]],"10168":[[14,1.0]],"11379":[[104,1.0]],"11367":[[107,0.6904],[110,0.1549],[112,0.1006],[109,0.0541]],"11435":[[103,0.5291],[107,0.3904],[113,0.0804]],"11692":[[100,0.7172],[101,0.2828]],"11103":[[114,1.0]],"11102":[[114,1.0]],"11693":[[100,1.0]],"11369":[[115,1.0]],"11363":[[111,1.0]],"11371":[[115,1.0]],"11359":[[109,1.0]],"10308":[[122,1.0]]};
 const cache={};
 async function soql(ds,q){try{const r=await fetch(SOC+ds+'.json?'+q);if(!r.ok)return null;return await r.json();}catch(e){console.warn('soql fail',ds,e);return null;}}
@@ -592,12 +624,18 @@ async function loadArrest(){if(cache.arrest)return cache.arrest;const j=await fe
 async function loadTraffic(boro){cache.traffic=cache.traffic||{};if(!cache.traffic[boro]){const rows=await soql(DS.collide,'$select=date_extract_y(crash_date) as yr,count(1) as crashes,sum(number_of_persons_injured) as inj,sum(number_of_persons_killed) as kill&$where='+encodeURIComponent("borough='"+boro+"'")+'&$group=yr&$order=yr&$limit=100');if(rows)cache.traffic[boro]=rows.filter(r=>+r.yr>=2013&&+r.yr<=2025);}return cache.traffic[boro];}
 async function load311(boro){cache.t311=cache.t311||{};if(!cache.t311[boro]){const d=new Date();d.setFullYear(d.getFullYear()-1);const iso=d.toISOString().slice(0,10);const rows=await soql(DS.c311,'$select=complaint_type,count(1) as n&$where='+encodeURIComponent("borough='"+boro+"' AND created_date>'"+iso+"'")+'&$group=complaint_type&$order=n desc&$limit=12');if(rows)cache.t311[boro]=rows;}return cache.t311[boro];}
 
-function drawLiveSeries(cid,sid,data,label,unit,mult){if(!data){document.getElementById(sid).innerHTML='<span class="loadnote">Couldn’t load live data — works on the hosted GitHub site, not this preview.</span>';return;}
- const yrs=data.years.filter(y=>y>=START);const pr=yrs.map(y=>((data.byP[P]||{})[y]||0)/popForYear(P,y)*mult);const cr=yrs.map(y=>data.city[y]/cityPop(y)*mult);const col=liveColors();
- drawLine(cid,[{label:'Citywide',data:cr,borderColor:col.city,borderDash:[7,4],borderWidth:2.2,pointRadius:0,fill:false,order:2},{label:'Precinct '+P,data:pr,borderColor:col.focus,borderWidth:3.2,pointRadius:0,fill:false,order:1}],yrs);
+function drawLiveSeries(cid,sid,data,label,unit,mult){if(!data){if(sid)document.getElementById(sid).innerHTML='<span class="loadnote">Couldn’t load live data — works on the hosted GitHub site, not this preview.</span>';return;}
+ const yrs=data.years.filter(y=>y>=START);const col=liveColors();
+ const pr=yrs.map(y=>((data.byP[P]||{})[y]||0)/popForYear(P,y)*mult);
+ const cr=yrs.map(y=>data.city[y]/cityPop(y)*mult);
+ const q1=[],md=[],q3=[];yrs.forEach(y=>{const a=RES.map(q=>((data.byP[q]||{})[y]||0)/popForYear(q,y)*mult).sort((x,z)=>x-z);q1.push(pctile(a,25));md.push(pctile(a,50));q3.push(pctile(a,75));});
+ drawLine(cid,[{label:'Q1',data:q1,borderColor:'rgba(0,0,0,0)',backgroundColor:col.band,pointRadius:0,fill:false,order:5},
+  {label:'Middle 50% of precincts',data:q3,borderColor:'rgba(0,0,0,0)',backgroundColor:col.band,pointRadius:0,fill:'-1',order:5},
+  {label:'Precinct median',data:md,borderColor:col.med,borderDash:[2,3],borderWidth:1.5,pointRadius:0,fill:false,order:4},
+  {label:'Citywide',data:cr,borderColor:col.city,borderDash:[7,4],borderWidth:2.2,pointRadius:0,fill:false,order:3},
+  {label:'Precinct '+P,data:pr,borderColor:col.focus,borderWidth:3.2,pointRadius:0,fill:false,order:1}],yrs);
  const ly=data.years[data.years.length-1];const inc=(data.byP[P]||{})[ly]||0;const r=inc/popForYear(P,ly)*mult;const cityr=data.city[ly]/cityPop(ly)*mult;let higher=0;RES.forEach(q=>{if(((data.byP[q]||{})[ly]||0)/popForYear(q,ly)*mult>r)higher++;});
- document.getElementById(sid).innerHTML=`<div class="statline">${label} <b>${f1(r)}</b>${unit} vs <b>${f1(cityr)}</b> city &nbsp;·&nbsp; <span class="pill">#${higher+1} of 76</span> &nbsp; <span class="${r<cityr?'dn':'up'}">${sgn(pc(cityr,r))}</span> &nbsp;·&nbsp; ${inc.toLocaleString()} in ${ly}</div>`;}
-
+ if(sid)document.getElementById(sid).innerHTML=`<div class="statline">${label} <b>${f1(r)}</b>${unit} vs <b>${f1(cityr)}</b> city &nbsp;·&nbsp; <span class="pill">#${higher+1} of 76</span> &nbsp; <span class="${r<cityr?'dn':'up'}">${sgn(pc(cityr,r))}</span> &nbsp;·&nbsp; ${inc.toLocaleString()} in ${ly}</div>`;}
 async function renderShootings(){document.getElementById('shootStats').innerHTML='<span class="loadnote">Loading shootings…</span>';drawLiveSeries('shoot','shootStats',await loadShoot(),'Shootings','/100k',1e5);}
 async function renderArrests(){document.getElementById('arrestStats').innerHTML='<span class="loadnote">Loading arrests…</span>';drawLiveSeries('arrest','arrestStats',await loadArrest(),'Arrests','/100k',1e5);}
 async function loadTrafficLive(){
@@ -648,7 +686,7 @@ async function render311(){const el=document.getElementById('c311Stats');el.inne
  const labels=[],vals=[];(j.topTypes||[]).forEach(t=>{const v=(d.types&&d.types[t]&&d.types[t][ly])?+d.types[t][ly]:0;if(v>0){labels.push(t);vals.push(v);}});
  const palette=['#0B2E6B','#C9A227','#2E7D5B','#7C8DB5','#B23A2E','#2E4A7F','#A9B4CC','#5B8C5A','#D98C5F','#6B5B95','#8A6D12','#3A7CA5'];
  if(charts.c311pie)charts.c311pie.destroy();
- charts.c311pie=new Chart(document.getElementById('c311pie'),{type:'doughnut',data:{labels,datasets:[{data:vals,backgroundColor:palette.slice(0,labels.length),borderColor:css('--card'),borderWidth:2}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'right',labels:{color:css('--ink'),font:{weight:'bold',size:10},boxWidth:12}}}}});
+ charts.c311pie=new Chart(document.getElementById('c311pie'),{type:'doughnut',data:{labels,datasets:[{data:vals,backgroundColor:palette.slice(0,labels.length),borderColor:css('--card'),borderWidth:2}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'right',labels:{color:css('--ink'),font:{weight:'bold',size:13},boxWidth:14,padding:8}}}}});
  document.getElementById('c311PieCap').textContent='Share of top complaint types in '+ly+' — Precinct '+P+' (ZIP area-weighted)';}
 async function loadMonthlyLive(){const since=new Date();since.setMonth(since.getMonth()-25);const iso=since.toISOString().slice(0,10);
  const q=d=>soql(d,'$select=date_trunc_ym(cmplnt_fr_dt) as ym,law_cat_cd,count(1) as n&$where='+encodeURIComponent('addr_pct_cd='+P+" AND cmplnt_fr_dt>'"+iso+"'")+'&$group=ym,law_cat_cd&$limit=5000');
@@ -665,9 +703,62 @@ async function ensureExtra(){try{const[a,b,tj,cj]=await Promise.all([loadShoot()
 }catch(e){}}
 document.addEventListener('change',e=>{if(e.target&&e.target.id==='c311metric')render311();});
 
+
+// ===== shared monthly + pie helpers (live) =====
+function moSince(){const d=new Date();d.setMonth(d.getMonth()-13);return d.toISOString().slice(0,10);}
+function yr1Since(){const d=new Date();d.setFullYear(d.getFullYear()-1);return d.toISOString().slice(0,10);}
+function monthlyBand(cid,sid,data,mult,unit){
+ if(!data||!data.months||!data.months.length){if(sid)document.getElementById(sid).innerHTML='<span class="loadnote">Couldn’t load live monthly data — works on the hosted site.</span>';if(charts[cid])charts[cid].destroy();return;}
+ const months=data.months.slice(-12);const col=liveColors();
+ const pf=(q,m)=>popForYear(q,+m.slice(0,4));
+ const pr=months.map(m=>((data.byP[String(P)]||{})[m]||0)/pf(P,m)*mult);
+ const city=months.map(m=>{let c=0,pp=0;RES.forEach(q=>{c+=((data.byP[String(q)]||{})[m]||0);pp+=pf(q,m);});return pp?c/pp*mult:0;});
+ const q1=[],md=[],q3=[];months.forEach(m=>{const a=RES.map(q=>((data.byP[String(q)]||{})[m]||0)/pf(q,m)*mult).sort((x,z)=>x-z);q1.push(pctile(a,25));md.push(pctile(a,50));q3.push(pctile(a,75));});
+ drawLine(cid,[{label:'Q1',data:q1,borderColor:'rgba(0,0,0,0)',backgroundColor:col.band,pointRadius:0,fill:false,order:5},
+  {label:'Middle 50% of precincts',data:q3,borderColor:'rgba(0,0,0,0)',backgroundColor:col.band,pointRadius:0,fill:'-1',order:5},
+  {label:'Precinct median',data:md,borderColor:col.med,borderDash:[2,3],borderWidth:1.5,pointRadius:0,fill:false,order:4},
+  {label:'Citywide',data:city,borderColor:col.city,borderDash:[7,4],borderWidth:2.2,pointRadius:0,fill:false,order:3},
+  {label:'Precinct '+P,data:pr,borderColor:col.focus,borderWidth:3,pointRadius:0,fill:false,order:1}],months);
+ if(sid){const lm=months[months.length-1];document.getElementById(sid).innerHTML='<div class="statline">Last 12 months \u00b7 '+lm+': <b>'+f1(pr[pr.length-1])+'</b>'+unit+' (precinct) vs <b>'+f1(city[city.length-1])+'</b>'+unit+' city</div>';}
+}
+async function liveMonthlyPct(datasets,datefield,pctfield){const since=moSince();let rows=[];
+ for(const ds of datasets){const r=await soql(ds,'$select=date_trunc_ym('+datefield+') as ym, '+pctfield+' as pct, count(1) as n&$where='+encodeURIComponent(datefield+">'"+since+"' AND "+pctfield+" IS NOT NULL")+'&$group=ym,'+pctfield+'&$limit=40000');if(r)rows=rows.concat(r);}
+ if(!rows.length)return null; const byP={},ms=new Set();
+ rows.forEach(r=>{const ym=(r.ym||'').slice(0,7),p=parseInt(r.pct);if(!ym||!p)return;ms.add(ym);byP[String(p)]=byP[String(p)]||{};byP[String(p)][ym]=(byP[String(p)][ym]||0)+(+r.n||0);});
+ return {months:[...ms].sort(),byP};}
+async function liveMonthlyZip(ds,datefield,zipfield){const since=moSince();
+ const r=await soql(ds,'$select=date_trunc_ym('+datefield+') as ym, '+zipfield+' as zip, count(1) as n&$where='+encodeURIComponent(datefield+">'"+since+"' AND "+zipfield+" IS NOT NULL")+'&$group=ym,'+zipfield+'&$limit=200000');
+ if(!r)return null; const byP={},ms=new Set();
+ r.forEach(row=>{const ym=(row.ym||'').slice(0,7),z=String(row.zip||'').split('.')[0].padStart(5,'0'),w=XWALK[z];if(!ym||!w)return;ms.add(ym);const n=+row.n||0;w.forEach(([p,fr])=>{const pk=String(p);byP[pk]=byP[pk]||{};byP[pk][ym]=(byP[pk][ym]||0)+n*fr;});});
+ return {months:[...ms].sort(),byP};}
+const PIE=['#0B2E6B','#C9A227','#2E7D5B','#7C8DB5','#B23A2E','#2E4A7F','#A9B4CC','#5B8C5A','#D98C5F','#6B5B95','#8A6D12','#3A7CA5'];
+function drawPie(cid,labels,vals){if(charts[cid])charts[cid].destroy();
+ charts[cid]=new Chart(document.getElementById(cid),{type:'doughnut',data:{labels,datasets:[{data:vals,backgroundColor:PIE.slice(0,labels.length),borderColor:css('--card'),borderWidth:2}]},
+  options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'right',labels:{color:css('--ink'),font:{weight:'bold',size:13},boxWidth:14,padding:8}}}}});}
+function pctZips(){return Object.keys(XWALK).filter(z=>XWALK[z].some(a=>a[0]===P));}
+
+async function renderShootMonthly(){const el=document.getElementById('shootMoStats');if(el)el.innerHTML='<span class="loadnote">Loading…</span>';if(!cache.shootMo)cache.shootMo=await liveMonthlyPct([DS.shoot,DS.shootY],'occur_date','precinct');monthlyBand('shootMo','shootMoStats',cache.shootMo,1e5,'/100k');}
+async function renderArrestMonthly(){const el=document.getElementById('arrestMoStats');if(el)el.innerHTML='<span class="loadnote">Loading…</span>';if(!cache.arrestMo)cache.arrestMo=await liveMonthlyPct([DS.arrestH,DS.arrestY],'arrest_date','arrest_precinct');monthlyBand('arrestMo','arrestMoStats',cache.arrestMo,1e5,'/100k');}
+async function renderTrafficMonthly(){const el=document.getElementById('trafficMoStats');if(el)el.innerHTML='<span class="loadnote">Loading…</span>';if(!cache.trafficMo)cache.trafficMo=await liveMonthlyZip(DS.collide,'crash_date','zip_code');monthlyBand('trafficMo','trafficMoStats',cache.trafficMo,1e5,'/100k');}
+async function render311Monthly(){const el=document.getElementById('c311MoStats');if(el)el.innerHTML='<span class="loadnote">Loading…</span>';if(!cache.c311Mo)cache.c311Mo=await liveMonthlyZip(DS.c311,'created_date','incident_zip');monthlyBand('c311Mo','c311MoStats',cache.c311Mo,1000,'/1k');}
+async function renderTrafficPie(){const el=document.getElementById('trafficPieStats');el.innerHTML='<span class="loadnote">Loading…</span>';
+ const zips=pctZips();if(!zips.length){el.innerHTML='';return;}const inz='('+zips.map(z=>"'"+z+"'").join(',')+')';
+ const r=await soql(DS.collide,'$select=contributing_factor_vehicle_1 as t, count(1) as n&$where='+encodeURIComponent("crash_date>'"+yr1Since()+"' AND zip_code in "+inz+" AND contributing_factor_vehicle_1 IS NOT NULL AND contributing_factor_vehicle_1!='Unspecified'")+'&$group=contributing_factor_vehicle_1&$order=n desc&$limit=8');
+ if(!r||!r.length){el.innerHTML='<span class="loadnote">Couldn’t load crash factors — works on the hosted site.</span>';return;}
+ drawPie('trafficPie',r.map(x=>x.t),r.map(x=>+x.n));document.getElementById('trafficPieCap').textContent='Top crash contributing factors, last 12 months — Precinct '+P+' (ZIP area-weighted)';el.innerHTML='';}
+async function load911Year(){if(cache.n911)return cache.n911;let rows=[];for(const ds of [DS.cadH,DS.cadY]){const r=await soql(ds,'$select=date_extract_y(create_date) as yr, nypd_pct_cd as precinct, count(1) as n&$group=yr,nypd_pct_cd&$limit=20000');if(r)rows=rows.concat(r);}if(!rows.length)return null;cache.n911=indexRows(rows,'precinct');return cache.n911;}
+async function render911(){const el=document.getElementById('n911Stats');el.innerHTML='<span class="loadnote">Loading 911 calls…</span>';drawLiveSeries('n911trend','n911Stats',await load911Year(),'911 calls','/1k',1000);}
+async function render911Monthly(){const el=document.getElementById('n911MoStats');if(el)el.innerHTML='<span class="loadnote">Loading…</span>';if(!cache.n911Mo)cache.n911Mo=await liveMonthlyPct([DS.cadH,DS.cadY],'create_date','nypd_pct_cd');monthlyBand('n911Mo','n911MoStats',cache.n911Mo,1000,'/1k');}
+async function render911Pie(){const el=document.getElementById('n911pieStats');el.innerHTML='<span class="loadnote">Loading…</span>';
+ const r=await soql(DS.cadH,'$select=typ_desc as t, count(1) as n&$where='+encodeURIComponent('nypd_pct_cd='+P+" AND create_date>'"+yr1Since()+"' AND typ_desc IS NOT NULL")+'&$group=typ_desc&$order=n desc&$limit=8')
+   || await soql(DS.cadY,'$select=typ_desc as t, count(1) as n&$where='+encodeURIComponent('nypd_pct_cd='+P+" AND create_date>'"+yr1Since()+"' AND typ_desc IS NOT NULL")+'&$group=typ_desc&$order=n desc&$limit=8');
+ if(!r||!r.length){el.innerHTML='<span class="loadnote">Couldn’t load 911 call types — works on the hosted site.</span>';return;}
+ drawPie('n911pie',r.map(x=>x.t),r.map(x=>+x.n));document.getElementById('n911PieCap').textContent='Top 911 call types, last 12 months — Precinct '+P;el.innerHTML='';}
+
 function renderAll(){
  document.getElementById('subhead').innerHTML='Precinct '+P+(NB[P]?' — '+NB[P]:'')+' · public safety by police precinct · population-adjusted crime 2000–2025 · benchmarked against 76 residential precincts · annual data through 2025'+(MONTHLY&&MONTHLY.generated&&MONTHLY.generated!=='pending — run the refresh workflow once'?' · monthly feed '+MONTHLY.generated:'');
  renderKpis();renderTrend();renderRank();renderDV();renderCCRB();renderMonthly();
+ if(activeTab==='crime'){renderShootMonthly();renderArrestMonthly();}else if(activeTab==='traffic'){renderTrafficMonthly();renderTrafficPie();}else if(activeTab==='t311'){render311Monthly();}else if(activeTab==='t911'){render911();render911Monthly();render911Pie();}
  if(activeTab==='crime'){renderShootings();renderArrests();}else if(activeTab==='traffic')renderTraffic();else if(activeTab==='t311')render311();
  document.getElementById('foot').innerHTML='Sources: NYPD Historical Crime Data by Precinct (CompStat), 2000–2025 · population from the 2020 Census + NYC Council ACS estimates (annual model) · NYPD Domestic Violence reports 2020–2025 · NYC CCRB 2000–2025. Rates per 100,000 residents; ranks among 76 residential precincts (Central Park excluded). The PPTX/XLSX buttons build a report for the selected precinct in your browser.';
 }
