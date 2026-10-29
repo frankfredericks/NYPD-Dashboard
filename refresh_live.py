@@ -96,7 +96,7 @@ def crime_monthly():
     qk=lambda d: soql(d, **{'$select':'date_trunc_ym(cmplnt_fr_dt) as ym, addr_pct_cd as pct, ky_cd, count(1) as n',
                             '$where':f"cmplnt_fr_dt > '{since}T00:00:00' AND addr_pct_cd IS NOT NULL AND ky_cd in (101,104,105,106,107,109,110)",
                             '$group':'ym, addr_pct_cd, ky_cd','$limit':'60000'})
-    c1,c2,k1,k2=qc(DS.cmpH),qc(DS.cmpY),qk(DS.cmpH),qk(DS.cmpY)
+    c1,c2,k1,k2=qc('cmpH'),qc('cmpY'),qk('cmpH'),qk('cmpY')
     if not c1 and not c2: return
     M=collections.defaultdict(dict); ms=set()
     def cell(p,ym):
@@ -211,7 +211,7 @@ def c311():
 def n911_pie():
     since=months_ago(12)
     rows=[]
-    for k in (DS.cadH, DS.cadY):
+    for k in ('cadH', 'cadY'):
         r=soql(k, **{'$select':'nypd_pct_cd as pct, typ_desc as t, count(1) as n','$where':f"create_date > '{since}T00:00:00' AND nypd_pct_cd IS NOT NULL AND typ_desc IS NOT NULL",'$group':'nypd_pct_cd, typ_desc','$limit':'60000'})
         if r: rows+=r
     if not rows: return
@@ -228,14 +228,14 @@ def safe(fn,*a):
     except Exception as e: print(f'warn: {getattr(fn,"__name__",fn)} failed: {e}', file=sys.stderr)
 
 if __name__=='__main__':
-    safe(byyear,'shootings.json',[DS.shoot,DS.shootY],'occur_date','precinct','NYPD Shootings',2006)
-    safe(byyear,'arrests.json',[DS.arrestH,DS.arrestY],'arrest_date','arrest_precinct','NYPD Arrests',2006)
-    safe(byyear,'n911.json',[DS.cadH,DS.cadY],'create_date','nypd_pct_cd','NYPD 911 Calls for Service',2018)
-    safe(byyear,'citations.json',[DS.bsumH,DS.bsumY],'violation_date','rpt_owning_cmd','NYPD Moving Violation B Summons',2018)
-    safe(bymonth,'shootings_monthly.json',[DS.shoot,DS.shootY],'occur_date','precinct','NYPD Shootings')
-    safe(bymonth,'arrests_monthly.json',[DS.arrestH,DS.arrestY],'arrest_date','arrest_precinct','NYPD Arrests')
-    safe(bymonth,'n911_monthly.json',[DS.cadH,DS.cadY],'create_date','nypd_pct_cd','NYPD 911 Calls')
-    safe(bymonth,'citations_monthly.json',[DS.bsumH,DS.bsumY],'violation_date','rpt_owning_cmd','NYPD B Summons')
+    safe(byyear,'shootings.json',['shoot','shootY'],'occur_date','precinct','NYPD Shootings',2006)
+    safe(byyear,'arrests.json',['arrestH','arrestY'],'arrest_date','arrest_precinct','NYPD Arrests',2006)
+    safe(byyear,'n911.json',['cadH','cadY'],'create_date','nypd_pct_cd','NYPD 911 Calls for Service',2018)
+    safe(byyear,'citations.json',['bsumH','bsumY'],'violation_date','rpt_owning_cmd','NYPD Moving Violation B Summons',2018)
+    safe(bymonth,'shootings_monthly.json',['shoot','shootY'],'occur_date','precinct','NYPD Shootings')
+    safe(bymonth,'arrests_monthly.json',['arrestH','arrestY'],'arrest_date','arrest_precinct','NYPD Arrests')
+    safe(bymonth,'n911_monthly.json',['cadH','cadY'],'create_date','nypd_pct_cd','NYPD 911 Calls')
+    safe(bymonth,'citations_monthly.json',['bsumH','bsumY'],'violation_date','rpt_owning_cmd','NYPD B Summons')
     safe(crime_monthly)
     safe(traffic)
     safe(c311)
