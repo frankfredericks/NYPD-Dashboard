@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>NYC Precinct Public Safety Dashboard</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path d='M12 1 3 5v6c0 5 3.8 9.4 9 11 5.2-1.6 9-6 9-11V5z' fill='%230B1F4D'/><path d='M12 4 6 6.5V11c0 3.6 2.6 6.9 6 8 3.4-1.1 6-4.4 6-8V6.5z' fill='%23C9A227'/></svg>">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script defer src="https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/dist/pptxgen.bundle.js"></script>
 <script defer src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
@@ -34,7 +35,8 @@ header h1{font-size:17px;margin:0;font-weight:bold;letter-spacing:.2px;flex:1 1 
 header h1 .k{color:var(--gold);font-weight:bold;letter-spacing:2px;font-size:11px;display:block;margin-bottom:2px}
 .ctl{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
 .ctl label{font-size:11px;color:#C9D4EA;font-weight:bold;text-transform:uppercase;letter-spacing:.5px}
-select,button.btn{font-family:inherit;font-size:14px;font-weight:bold;border-radius:8px;border:1px solid var(--line);padding:8px 10px;background:#fff;color:var(--ink);cursor:pointer}
+select,button.btn{font-family:inherit;font-size:14px;font-weight:bold;border-radius:8px;border:1px solid var(--line);padding:8px 10px;background:var(--card);color:var(--ink);cursor:pointer}
+select option{background:var(--card);color:var(--ink)}
 select{min-width:140px}
 .wrap{max-width:1180px;margin:0 auto;padding:18px}
 .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:14px}
@@ -100,7 +102,7 @@ details.acc[open]>summary .chev{transform:rotate(90deg)}
 body{font-size:15px}
 .cap{font-size:12.5px}.statline{font-size:14px}.foot{font-size:11.5px}.loadnote{font-size:12.5px}
 .kpi .big{font-size:33px}.kpi .lab{font-size:12.5px}.kpi .sub{font-size:11.5px}
-.card h2{font-size:16px}.tabbtn{font-size:15px}
+.card h2{font-size:16px;text-transform:capitalize}.tabbtn{font-size:15px}
 select,button.btn,.themebtn,.ctl label,.tag{font-size:13px}
 @media (max-width:760px){
  .wrap{padding:12px}header{padding:10px 12px}header h1{font-size:16px}
@@ -257,7 +259,7 @@ select,button.btn,.themebtn,.ctl label,.tag{font-size:13px}
    <div class="card"><h2>911 calls for service over time</h2><div class="cap" id="n911Cap">Dispatched 911 calls per 1,000 residents — precinct vs citywide, middle-50% band (2018–present)</div><div class="chartbox"><canvas id="n911trend"></canvas></div><div id="n911Stats" style="margin-top:10px"><span class="loadnote">Loads live from NYC Open Data on the hosted site.</span></div></div>
    <div class="row two">
     <div class="card"><h2>911 calls — last 12 months</h2><div class="cap">Per 1,000 residents · precinct vs citywide · middle-50% band</div><div class="chartbox sm"><canvas id="n911Mo"></canvas></div><div id="n911MoStats" style="margin-top:10px"></div></div>
-    <div class="card"><h2>911 call-type mix</h2><div class="cap" id="n911PieCap">Top call types in the last 12 months</div><div class="chartbox sm"><canvas id="n911pie"></canvas></div><div id="n911pieStats" style="margin-top:10px"></div></div>
+    <div class="card"><h2>911 Call Type</h2><div class="cap" id="n911PieCap">Top call types in the last 12 months</div><div class="chartbox sm"><canvas id="n911pie"></canvas></div><div id="n911pieStats" style="margin-top:10px"></div></div>
    </div>
    <div class="foot">Source: NYPD Calls for Service (CAD), 2018–present. Call volume reflects demand/dispatch, not crime.</div>
   </div>
@@ -359,7 +361,7 @@ const MONTHS3=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov'
 function fmtMonth(ym){const p=String(ym).split('-');return (MONTHS3[(+p[1])-1]||'')+' '+p[0];}
 function bandVals(cof,keys,mult,popFn){
  const pr=keys.map(k=>{const c=cof(P,k);return UNIT==='abs'?c:c/popFn(P,k)*mult;});
- const city=keys.map(k=>{let c=0,pp=0;RES.forEach(q=>{c+=cof(q,k);pp+=popFn(q,k);});return UNIT==='abs'?c:(pp?c/pp*mult:0);});
+ const city=keys.map(k=>{let c=0,pp=0;RES.forEach(q=>{c+=cof(q,k);pp+=popFn(q,k);});return UNIT==='abs'?(RES.length?c/RES.length:0):(pp?c/pp*mult:0);});
  const q1=[],md=[],q3=[];keys.forEach(k=>{const a=RES.map(q=>{const c=cof(q,k);return UNIT==='abs'?c:c/popFn(q,k)*mult;}).sort((x,z)=>x-z);q1.push(pctile(a,25));md.push(pctile(a,50));q3.push(pctile(a,75));});
  return {pr,city,q1,md,q3};}
 function drawBand(cid,labels,v,accent){const col=liveColors();
@@ -728,11 +730,13 @@ async function liveMonthlyZip(ds,datefield,zipfield){const since=moSince();
  return {months:[...ms].sort(),byP};}
 function titleCase(s){return String(s||'').toLowerCase().replace(/\b([a-z])/g,function(m,c){return c.toUpperCase();});}
 const CALLMAP={'AMBULANCE CASE':'Medical / Ambulance','AMBULANCE':'Medical / Ambulance','ALARMS':'Alarm','ALARM':'Alarm','VISIBILITY PATROL':'Patrol Check','VISIBILITY PATROL (DIRECTED)':'Directed Patrol','INVESTIGATE/POSSIBLE CRIME':'Possible Crime','DISPUTE':'Dispute','AUTO ACCIDENT':'Vehicle Accident','VEHICLE ACCIDENT':'Vehicle Accident','EDP':'Person In Crisis','AIDED CASE':'Person Needing Aid','SICK/INJURED':'Sick / Injured','NON-CRIME CORRECTION':'Non-Crime','OTHERS':'Other','OTHER':'Other'};
-function prettyCall(s){const u=String(s||'').toUpperCase().trim();return CALLMAP[u]||titleCase(s);}
+function prettyCall(s){let u=String(s||'').toUpperCase().trim();if(CALLMAP[u])return CALLMAP[u];u=u.replace(/^INVESTIGATE\/POSSIBLE CRIME[\s:\-]*/,'').replace(/^VISIBILITY PATROL[\s:\-]*/,'');return titleCase(u||s);}
 const PIE=['#0B2E6B','#C9A227','#2E7D5B','#7C8DB5','#B23A2E','#2E4A7F','#A9B4CC','#5B8C5A','#D98C5F','#6B5B95','#8A6D12','#3A7CA5'];
+const PIE_SKIP=new Set(['DOES NOT APPLY','UNSPECIFIED','']);
+function cleanPie(rows,pf){const L=[],V=[];rows.forEach(r=>{const raw=String(r.t||'').trim();if(PIE_SKIP.has(raw.toUpperCase()))return;L.push(pf?pf(raw):raw);V.push(+r.n);});return {labels:L,vals:V};}
 function drawPie(cid,labels,vals){if(charts[cid])charts[cid].destroy();
  charts[cid]=new Chart(document.getElementById(cid),{type:'doughnut',data:{labels,datasets:[{data:vals,backgroundColor:PIE.slice(0,labels.length),borderColor:css('--card'),borderWidth:2}]},
-  options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'right',labels:{color:css('--ink'),font:{weight:'bold',size:13},boxWidth:14,padding:8}}}}});}
+  options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'right',labels:{color:css('--ink'),font:{weight:'bold',size:13},boxWidth:14,padding:8}},tooltip:{callbacks:{label:function(ctx){const v=ctx.parsed||0,tot=ctx.dataset.data.reduce((a,b)=>a+(+b||0),0);return ' '+ctx.label+': '+v.toLocaleString()+' ('+(tot?(v/tot*100).toFixed(1):0)+'%)';}}}}}});}
 function pctZips(){return Object.keys(XWALK).filter(z=>XWALK[z].some(a=>a[0]===P));}
 
 async function renderShootMonthly(){const el=document.getElementById('shootMoStats');if(el)el.innerHTML='<span class="loadnote">Loading…</span>';if(!cache.shootMo)cache.shootMo=await fetchJSON('shootings_monthly.json')||await liveMonthlyPct([DS.shoot,DS.shootY],'occur_date','precinct');monthlyBand('shootMo','shootMoStats',cache.shootMo,1e5,'/100k');}
@@ -750,11 +754,11 @@ async function render311Wait(){const el=document.getElementById('wait311Stats');
  const ly=years[years.length-1],r=pr[pr.length-1],cr=city[city.length-1];
  el.innerHTML=`<div class="statline">${ly}: avg <b>${r!=null?f1(r):'—'}</b> days to close (precinct) vs <b>${cr!=null?f1(cr):'—'}</b> days city · all agencies</div>`;}
 async function renderTrafficPie(){const el=document.getElementById('trafficPieStats');el.innerHTML='<span class="loadnote">Loading…</span>';
- {const j=await fetchJSON('traffic_factors.json');if(j&&j.byPrecinct&&j.byPrecinct[String(P)]){const rows=j.byPrecinct[String(P)];drawPie('trafficPie',rows.map(x=>titleCase(x.t)),rows.map(x=>+x.n));document.getElementById('trafficPieCap').textContent='Top crash contributing factors, last 12 months — Precinct '+P+' (ZIP area-weighted)';el.innerHTML='';return;}}
+ {const j=await fetchJSON('traffic_factors.json');if(j&&j.byPrecinct&&j.byPrecinct[String(P)]){const cp=cleanPie(j.byPrecinct[String(P)],titleCase);drawPie('trafficPie',cp.labels,cp.vals);document.getElementById('trafficPieCap').textContent='Top crash contributing factors, last 12 months — Precinct '+P+' (ZIP area-weighted)';el.innerHTML='';return;}}
  const zips=pctZips();if(!zips.length){el.innerHTML='';return;}const inz='('+zips.map(z=>"'"+z+"'").join(',')+')';
  const r=await soql(DS.collide,'$select=contributing_factor_vehicle_1 as t, count(1) as n&$where='+encodeURIComponent("crash_date>'"+yr1Since()+"' AND zip_code in "+inz+" AND contributing_factor_vehicle_1 IS NOT NULL AND contributing_factor_vehicle_1!='Unspecified'")+'&$group=contributing_factor_vehicle_1&$order=n desc&$limit=8');
  if(!r||!r.length){el.innerHTML='<span class="loadnote">Couldn’t load crash factors — works on the hosted site.</span>';return;}
- drawPie('trafficPie',r.map(x=>x.t),r.map(x=>+x.n));document.getElementById('trafficPieCap').textContent='Top crash contributing factors, last 12 months — Precinct '+P+' (ZIP area-weighted)';el.innerHTML='';}
+ {const cp=cleanPie(r,titleCase);drawPie('trafficPie',cp.labels,cp.vals);}document.getElementById('trafficPieCap').textContent='Top crash contributing factors, last 12 months — Precinct '+P+' (ZIP area-weighted)';el.innerHTML='';}
 async function loadCiteYear(){if(cache.cite)return cache.cite;{const j=await fetchJSON('citations.json');if(j&&j.byPrecinct){cache.cite=fileToIndex(j);return cache.cite;}}let rows=[];for(const ds of [DS.bsumH,DS.bsumY]){const r=await soql(ds,'$select=date_extract_y(violation_date) as yr, rpt_owning_cmd as precinct, count(1) as n&$group=yr,rpt_owning_cmd&$limit=20000');if(r)rows=rows.concat(r);}if(!rows.length)return null;cache.cite=indexRows(rows,'precinct');return cache.cite;}
 async function renderCite(){const el=document.getElementById('citeStats');el.innerHTML='<span class="loadnote">Loading citations…</span>';drawLiveSeries('cite','citeStats',await loadCiteYear(),'Citations','/1k',1000);}
 async function renderCiteMonthly(){const el=document.getElementById('citeMoStats');if(el)el.innerHTML='<span class="loadnote">Loading…</span>';if(!cache.citeMo)cache.citeMo=await fetchJSON('citations_monthly.json')||await liveMonthlyPct([DS.bsumH,DS.bsumY],'violation_date','rpt_owning_cmd');monthlyBand('citeMo','citeMoStats',cache.citeMo,1000,'/1k');}
@@ -762,11 +766,11 @@ async function load911Year(){if(cache.n911)return cache.n911;{const j=await fetc
 async function render911(){const el=document.getElementById('n911Stats');el.innerHTML='<span class="loadnote">Loading 911 calls…</span>';drawLiveSeries('n911trend','n911Stats',await load911Year(),'911 calls','/1k',1000);}
 async function render911Monthly(){const el=document.getElementById('n911MoStats');if(el)el.innerHTML='<span class="loadnote">Loading…</span>';if(!cache.n911Mo)cache.n911Mo=await fetchJSON('n911_monthly.json')||await liveMonthlyPct([DS.cadH,DS.cadY],'create_date','nypd_pct_cd');monthlyBand('n911Mo','n911MoStats',cache.n911Mo,1000,'/1k');}
 async function render911Pie(){const el=document.getElementById('n911pieStats');el.innerHTML='<span class="loadnote">Loading…</span>';
- {const j=await fetchJSON('n911_types.json');if(j&&j.byPrecinct&&j.byPrecinct[String(P)]){const rows=j.byPrecinct[String(P)];drawPie('n911pie',rows.map(x=>prettyCall(x.t)),rows.map(x=>+x.n));document.getElementById('n911PieCap').textContent='Top 911 call types, last 12 months — Precinct '+P;el.innerHTML='';return;}}
+ {const j=await fetchJSON('n911_types.json');if(j&&j.byPrecinct&&j.byPrecinct[String(P)]){const cp=cleanPie(j.byPrecinct[String(P)],prettyCall);drawPie('n911pie',cp.labels,cp.vals);document.getElementById('n911PieCap').textContent='911 Call Type — last 12 months, Precinct '+P;el.innerHTML='';return;}}
  const r=await soql(DS.cadH,'$select=typ_desc as t, count(1) as n&$where='+encodeURIComponent('nypd_pct_cd='+P+" AND create_date>'"+yr1Since()+"' AND typ_desc IS NOT NULL")+'&$group=typ_desc&$order=n desc&$limit=8')
    || await soql(DS.cadY,'$select=typ_desc as t, count(1) as n&$where='+encodeURIComponent('nypd_pct_cd='+P+" AND create_date>'"+yr1Since()+"' AND typ_desc IS NOT NULL")+'&$group=typ_desc&$order=n desc&$limit=8');
  if(!r||!r.length){el.innerHTML='<span class="loadnote">Couldn’t load 911 call types — works on the hosted site.</span>';return;}
- drawPie('n911pie',r.map(x=>prettyCall(x.t)),r.map(x=>+x.n));document.getElementById('n911PieCap').textContent='Top 911 call types, last 12 months — Precinct '+P;el.innerHTML='';}
+ {const cp=cleanPie(r,prettyCall);drawPie('n911pie',cp.labels,cp.vals);}document.getElementById('n911PieCap').textContent='911 Call Type — last 12 months, Precinct '+P;el.innerHTML='';}
 
 function renderAll(){
  document.getElementById('subhead').innerHTML='';

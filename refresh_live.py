@@ -46,6 +46,7 @@ def byyear(name, datasets, datefield, pctfield, src, ymin=2000):
     for k in datasets:
         r=soql(k, **{'$select':f'date_extract_y({datefield}) as yr, {pctfield} as precinct, count(1) as n',
                      '$group':f'yr, {pctfield}','$limit':'30000'})
+        print(f'  byyear {name}: dataset {k} -> {len(r) if r else 0} rows', flush=True)
         if r: rows+=r
     byP=collections.defaultdict(lambda: collections.defaultdict(int)); city=collections.defaultdict(int); yrs=set()
     for row in rows:
@@ -139,7 +140,7 @@ def traffic():
     # factor pie (last 12 mo)
     since=months_ago(12)
     r=soql('collide', **{'$select':'zip_code, contributing_factor_vehicle_1 as t, count(1) as n',
-           '$where':f"crash_date > '{since}T00:00:00' AND zip_code IS NOT NULL AND contributing_factor_vehicle_1 IS NOT NULL AND contributing_factor_vehicle_1!='Unspecified'",
+           '$where':f"crash_date > '{since}T00:00:00' AND zip_code IS NOT NULL AND contributing_factor_vehicle_1 IS NOT NULL AND contributing_factor_vehicle_1 NOT IN('Unspecified','Does Not Apply')",
            '$group':'zip_code, contributing_factor_vehicle_1','$limit':'200000'})
     if r:
         byP=collections.defaultdict(lambda: collections.defaultdict(float))
@@ -186,7 +187,8 @@ def c311():
                   'byPrecinct':{p:{'total':pt(v['total']),'types':pty(v['types'])} for p,v in byP.items()},
                   'city':{'total':pt(city['total']),'types':pty(city['types'])}})
     bymonth_zip('c311_monthly.json', 'c311', 'created_date', 'incident_zip', 'NYC 311')
-    # resolution time: avg days to close, precinct x year (ZIP weighted average)
+
+def wait311():
     r=soql('c311', **{'$select':'date_extract_y(created_date) as yr, incident_zip, avg(date_diff_d(created_date, closed_date)) as avgdays, count(1) as n',
            '$where':f"created_date > '2018-01-01T00:00:00' AND closed_date IS NOT NULL AND incident_zip IS NOT NULL",
            '$group':'yr, incident_zip','$limit':'200000'})
@@ -239,5 +241,6 @@ if __name__=='__main__':
     safe(crime_monthly)
     safe(traffic)
     safe(c311)
+    safe(wait311)
     safe(n911_pie)
     print('done.')
